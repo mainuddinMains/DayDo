@@ -15,6 +15,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useModalStore } from '../store/modalStore'
 
 /* ── Types ─────────────────────────────────────────────────────────────────── */
+
 interface NavItem {
   to:     string
   icon:   LucideIcon
@@ -28,6 +29,7 @@ interface NavSection {
 }
 
 /* ── Nav config ────────────────────────────────────────────────────────────── */
+
 const SECTIONS: NavSection[] = [
   {
     title: 'Overview',
@@ -55,7 +57,17 @@ const SECTIONS: NavSection[] = [
   },
 ]
 
+/* Bottom tab items — 5 key destinations + centre Add button */
+const TAB_ITEMS: (NavItem | null)[] = [
+  { to: '/',         icon: CalendarDays,  label: 'Today'    },
+  { to: '/upcoming', icon: CalendarClock, label: 'Upcoming' },
+  null, // centre Add Task button
+  { to: '/calendar', icon: CalendarRange, label: 'Calendar' },
+  { to: '/profile',  icon: User,          label: 'Profile'  },
+]
+
 /* ── Sub-components ────────────────────────────────────────────────────────── */
+
 function Badge({ count }: { count: number }) {
   return (
     <span className="sidebar__badge" aria-label={`${count} items`}>
@@ -64,11 +76,7 @@ function Badge({ count }: { count: number }) {
   )
 }
 
-function SidebarLink({ item, onClose, isMobile }: {
-  item: NavItem
-  onClose: () => void
-  isMobile: boolean
-}) {
+function SidebarLink({ item, onClose }: { item: NavItem; onClose: () => void }) {
   return (
     <NavLink
       to={item.to}
@@ -76,7 +84,7 @@ function SidebarLink({ item, onClose, isMobile }: {
       className={({ isActive }) =>
         `sidebar__link${isActive ? ' sidebar__link--active' : ''}`
       }
-      onClick={isMobile ? onClose : undefined}
+      onClick={onClose}
     >
       <item.icon size={15} strokeWidth={1.75} className="sidebar__link-icon" />
       <span className="sidebar__link-label">{item.label}</span>
@@ -85,7 +93,42 @@ function SidebarLink({ item, onClose, isMobile }: {
   )
 }
 
+/* ── Bottom tab bar (mobile) ───────────────────────────────────────────────── */
+
+function BottomTabBar({ openAddTask }: { openAddTask: () => void }) {
+  return (
+    <nav className="bottom-tabs" aria-label="Main navigation">
+      {TAB_ITEMS.map((item) =>
+        item === null ? (
+          <button
+            key="add"
+            type="button"
+            className="bottom-tab bottom-tab--add"
+            onClick={openAddTask}
+            aria-label="Add task"
+          >
+            <Plus size={20} strokeWidth={2.25} />
+          </button>
+        ) : (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end
+            className={({ isActive }) =>
+              `bottom-tab${isActive ? ' bottom-tab--active' : ''}`
+            }
+          >
+            <item.icon size={19} strokeWidth={1.75} />
+            <span className="bottom-tab__label">{item.label}</span>
+          </NavLink>
+        )
+      )}
+    </nav>
+  )
+}
+
 /* ── Sidebar ───────────────────────────────────────────────────────────────── */
+
 interface SidebarProps {
   isOpen:   boolean
   isMobile: boolean
@@ -95,24 +138,20 @@ interface SidebarProps {
 export default function Sidebar({ isOpen, isMobile, onClose }: SidebarProps) {
   const openAddTask = useModalStore((s) => s.openAddTask)
 
-  const handleNewTask = () => {
-    if (isMobile) onClose()
-    openAddTask()
+  /* On mobile, render the fixed bottom tab bar instead of the drawer */
+  if (isMobile) {
+    return <BottomTabBar openAddTask={openAddTask} />
   }
 
   return (
     <>
-      {isMobile && isOpen && (
-        <div className="sidebar__backdrop" onClick={onClose} aria-hidden="true" />
-      )}
-
       <aside
         className={`sidebar ${isOpen ? 'sidebar--open' : 'sidebar--closed'}`}
         aria-label="Main navigation"
       >
         <div className="sidebar__scroll">
           {/* New Task button */}
-          <button className="sidebar__new-task" onClick={handleNewTask}>
+          <button className="sidebar__new-task" onClick={openAddTask}>
             <Plus size={14} strokeWidth={2.25} />
             New Task
           </button>
@@ -122,12 +161,7 @@ export default function Sidebar({ isOpen, isMobile, onClose }: SidebarProps) {
               <p className="sidebar__section-label">{section.title}</p>
               <nav>
                 {section.items.map((item) => (
-                  <SidebarLink
-                    key={item.to}
-                    item={item}
-                    onClose={onClose}
-                    isMobile={isMobile}
-                  />
+                  <SidebarLink key={item.to} item={item} onClose={onClose} />
                 ))}
               </nav>
             </div>

@@ -1,5 +1,11 @@
 import { create } from 'zustand'
 import type { Task, Priority, Source, TaskFilters } from '../types'
+import { useToastStore }        from './toastStore'
+import { useNotificationStore } from './notificationStore'
+
+function truncate(s: string, max = 32): string {
+  return s.length > max ? s.slice(0, max) + '…' : s
+}
 
 /* ── Source colour map ─────────────────────────────────────────────────────── */
 
@@ -167,6 +173,7 @@ export type IntegrationStatus = 'idle' | 'connecting' | 'loading' | 'connected' 
 interface TaskState {
   tasks:        Task[]
   filters:      TaskFilters
+  searchQuery:  string
   focusStreak:  number
 
   // Integration statuses
@@ -191,6 +198,9 @@ interface TaskState {
   filterBySource:   (source: Source | null) => void
   clearFilters:     () => void
 
+  // Search
+  setSearchQuery: (q: string) => void
+
   filteredTasks: () => Task[]
 }
 
@@ -199,6 +209,7 @@ interface TaskState {
 export const useTaskStore = create<TaskState>((set, get) => ({
   tasks:       SEED_TASKS,
   filters:     { priority: null, source: null },
+  searchQuery: '',
   focusStreak: 7,
 
   googleStatus: 'idle',
@@ -230,7 +241,7 @@ export const useTaskStore = create<TaskState>((set, get) => ({
 
   /* ── Mutations ── */
 
-  addTask: (payload) =>
+  addTask: (payload) => {
     set((state) => ({
       tasks: [
         {
@@ -240,19 +251,43 @@ export const useTaskStore = create<TaskState>((set, get) => ({
         },
         ...state.tasks,
       ],
-    })),
+    }))
+    const label = truncate(payload.name)
+    useToastStore.getState().show(`"${label}" added`, 'success')
+    useNotificationStore.getState().add('task_added', payload.name)
+  },
 
-  toggleTask: (id) =>
+  toggleTask: (id) => {
+    const task = get().tasks.find((t) => t.id === id)
+    if (!task) return
     set((state) => ({
       tasks: state.tasks.map((t) =>
         t.id === id ? { ...t, done: !t.done } : t
       ),
-    })),
+    }))
+    const nowDone = !task.done
+    const label   = truncate(task.name)
+    useToastStore.getState().show(
+      nowDone ? `"${label}" marked complete` : `"${label}" marked incomplete`,
+      nowDone ? 'success' : 'info',
+    )
+    useNotificationStore.getState().add(
+      nowDone ? 'task_completed' : 'task_uncompleted',
+      task.name,
+    )
+  },
 
-  deleteTask: (id) =>
+  deleteTask: (id) => {
+    const task = get().tasks.find((t) => t.id === id)
     set((state) => ({
       tasks: state.tasks.filter((t) => t.id !== id),
-    })),
+    }))
+    if (task) {
+      const label = truncate(task.name)
+      useToastStore.getState().show(`"${label}" deleted`, 'info')
+      useNotificationStore.getState().add('task_deleted', task.name)
+    }
+  },
 
   /* ── Filters ── */
 
@@ -265,13 +300,22 @@ export const useTaskStore = create<TaskState>((set, get) => ({
   clearFilters: () =>
     set({ filters: { priority: null, source: null } }),
 
+  setSearchQuery: (q) => set({ searchQuery: q }),
+
   /* ── Derived ── */
 
   filteredTasks: () => {
-    const { tasks, filters } = get()
+    const { tasks, filters, searchQuery } = get()
+    const q = searchQuery.trim().toLowerCase()
     return tasks.filter((t) => {
       if (filters.priority && t.priority !== filters.priority) return false
       if (filters.source   && t.source   !== filters.source)   return false
+      if (q) {
+        const inName   = t.name.toLowerCase().includes(q)
+        const inSource = t.source.toLowerCase().includes(q)
+        const inTags   = t.tags.some((tag) => tag.toLowerCase().includes(q))
+        if (!inName && !inSource && !inTags) return false
+      }
       return true
     })
   },
