@@ -1,0 +1,15 @@
+{
+  "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "env": {
+    "VITE_SUPABASE_URL": "@vite_supabase_url",
+    "VITE_SUPABASE_ANON_KEY": "@vite_supabase_anon_key",
+    "VITE_GOOGLE_CLIENT_ID": "@vite_google_client_id",
+    "VITE_GOOGLE_REDIRECT_URI": "@vite_google_redirect_uri",
+    "VITE_SLACK_CLIENT_ID": "@vite_slack_client_id",
+    "VITE_SLACK_CLIENT_SECRET": "@vite_slack_client_secret",
+    "VITE_SLACK_REDIRECT_URI": "@vite_slack_redirect_uri"
+  }
+}
