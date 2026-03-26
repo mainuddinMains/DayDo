@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ios-blue: #007aff;
+  --color-ios-gray: #8e8e93;
+  --color-ios-separator: #c6c6c8;
+  --color-ios-bg: #f2f2f7;
+  --color-ios-error: #ff3b30;
+  
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-ios-bg text-black antialiased select-none;
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+.ios-blur {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Hide scrollbar for clean iOS feel */
+::-webkit-scrollbar {
+  display: none;
+}
